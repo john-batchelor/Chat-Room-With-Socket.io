@@ -1,0 +1,178 @@
+<!--  
+    AUTHOR: JOHN BATCHELOR
+    WEBSITE: john-batchelor.com
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Chat Room with Sockets - Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  <style>
+      .main-bit
+      {
+          background: #efefef;
+          border-radius: 10px;
+          border: 1px solid gainsboro;
+          height: 80vh;
+          overflow-y: scroll;
+      }
+
+      .clear
+      {
+          position:absolute;
+          right: 10px;
+          z-index:1;
+      }
+
+      .input-container
+      {
+        position:fixed;
+        bottom: 0;
+        width:100%;
+        left: 0;
+        padding: 20px;
+        background: lightcyan;
+        
+      }
+
+      .input-container input{
+        font-size: 18px;
+      }
+
+      .messages-inner div span{
+          font-size: 8px;
+          text-align:right;
+          display:block;
+      }
+
+      .messages-inner div
+      {
+        border: 1px solid #efefef;
+        padding: 5px 10px;
+        border-radius: 3px;
+        background: aliceblue;
+        width:70%;
+      }
+
+      .messages-inner div.you
+      {
+          background: #ceff83;
+          margin-left: 30%;
+      }
+        
+  </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div><button class="btn-danger clear">Clear messages</button></div>
+        <div class="col-md-6 col-md-offset-3 main-bit">
+            <h1>Chat room with Sockets</h1>
+            
+            
+            <div id="messages">
+                <h2>Messages</h2>
+                <div class="messages-inner"></div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+<div class="input-container">
+                
+    <div class="input-group">
+        <input type="text" id="message" placeholder="Enter your message here" class="form-control">
+        <div class="input-group-btn">
+          <span class="btn btn-default" id="sendMessage">
+            Send
+          </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+
+<script>
+    var url = window.location.href;
+
+    var socket = io(url);
+
+    var sendBtn = document.querySelector("#sendMessage");
+
+    function sendMsg()
+    {
+        var message = $("#message").val();
+        if(message != "")
+        {
+            var data = {id: socket.id, message: message};
+        
+            socket.emit("message", data);
+
+            $("#message").val("");
+
+        
+        }
+
+        $(".main-bit").scrollTop($(".main-bit").height());
+        
+    }
+
+    $("#sendMessage").click(function(){
+        sendMsg();
+    });
+
+    $(document).on('keypress',function(e) {
+    if(e.which == 13) {
+
+        //if enter clicked then send message
+        sendMsg();
+    }
+});
+
+    socket.on("messages", function(data){
+        console.log(data); //for debugging purposes
+
+        var messages = document.querySelector(".messages-inner");
+        messages.innerHTML = ""; //reset all the messages as the messages will return the full list of messages
+        for(var i = 0; i<data.length; i++)
+        {
+            var div = document.createElement("div");
+            
+            if(data[i].id == socket.id) //if the sender of this message was you.
+            {
+                div.classList.add("you"); //for this implementation this will colour the div to a different colour than other messages.
+            }
+
+            var p = document.createElement("p");
+            p.textContent = data[i].message; // output the message
+
+            var span = document.createElement("span"); 
+            span.textContent = data[i].id; //show the sender.
+
+            div.append(p);
+            div.append(span);
+            messages.append(div);
+        }
+
+        $(".main-bit").scrollTop($(".main-bit").height());
+
+        if(data.length == 0)
+        {
+            $(messages).append("<h4>No messages at this time, be the first</h4>");
+        }
+    });
+
+    $(".clear").click(function(){
+        socket.emit("clear"); //send to server to clear all messages.
+        $(".messages-inner").html(""); //clear all messages on client (reset)
+        $(".messages-inner").append("<h4>No messages at this time, be the first</h4>");
+    });
+</script>
+</body>
+</html>
